@@ -41,7 +41,7 @@ public class MyBot : IChessBot
         return score;
     }
   
-    public double Maximize(Board board, bool color, int deep)
+    public double Maximize(Board board, bool color, int deep, double alpha, double beta)
     {
         if (deep == 1)
             return Score(board, color);
@@ -50,16 +50,21 @@ public class MyBot : IChessBot
         foreach (Move move in board.GetLegalMoves())
         {
             board.MakeMove(move);
-            double score = Minimize(board, color, deep - 1);
+            double score = Minimize(board, color, deep - 1, alpha, beta);
             board.UndoMove(move);
 
             maxScore = Math.Max(maxScore, score);
+            alpha = Math.Max(alpha, score);
+
+            if (beta <= alpha)
+                break;
         }
 
         return maxScore;
     }
+   
 
-    public double Minimize(Board board, bool color, int deep)
+    public double Minimize(Board board, bool color, int deep, double alpha, double beta)
     {
         if (deep == 1)
             return Score(board, color);
@@ -68,14 +73,19 @@ public class MyBot : IChessBot
         foreach (Move move in board.GetLegalMoves())
         {
             board.MakeMove(move);
-            double score = Maximize(board, color, deep - 1);
+            double score = Maximize(board, color, deep - 1, alpha, beta);
             board.UndoMove(move);
 
             minScore = Math.Min(minScore, score);
+            beta = Math.Min(beta, score);
+
+            if (beta <= alpha)
+                break;
         }
 
         return minScore;
     }
+
 
     public Move Think(Board board, Timer timer)
     {
@@ -83,11 +93,13 @@ public class MyBot : IChessBot
 
         Move bestMove = moves[0];
         double bestScore = double.NegativeInfinity;
+        double alpha = double.NegativeInfinity;
+        double beta = double.PositiveInfinity;
 
         foreach (Move move in moves)
         {
             board.MakeMove(move);
-            double score = Minimize(board, board.IsWhiteToMove, 4);
+            double score = Minimize(board, board.IsWhiteToMove, 5, alpha, beta);
             board.UndoMove(move);
 
             if (score > bestScore)
