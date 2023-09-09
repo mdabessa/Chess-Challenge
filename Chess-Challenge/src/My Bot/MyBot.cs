@@ -91,7 +91,8 @@ public class MyBot : IChessBot
     {
         Move[] moves = board.GetLegalMoves();
 
-        Move bestMove = moves[0];
+        // list with only the first move of moves
+        List<Move> bestMoves = new();
         double bestScore = double.NegativeInfinity;
         double alpha = double.NegativeInfinity;
         double beta = double.PositiveInfinity;
@@ -105,11 +106,20 @@ public class MyBot : IChessBot
             if (score > bestScore)
             {
                 bestScore = score;
-                bestMove = move;
+                bestMoves.Clear();
+                bestMoves.Add(move);
+            }
+            else if (score == bestScore)
+            {
+                bestMoves.Add(move);
             }
         }
 
-        Console.WriteLine($"Best score: {bestScore}");
+
+        Random random = new();
+        Move bestMove = bestMoves[random.Next(bestMoves.Count)];
+
+        Console.WriteLine($"Actual score: {bestScore}");
         return bestMove;
     }
 }
