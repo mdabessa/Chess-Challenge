@@ -4,6 +4,16 @@ using System.Collections.Generic;
 
 public class MyBot : IChessBot
 {
+    public int CalculateDepth(double time, double maxTime)
+    {
+        if (time < 1000)
+            return 3;
+        else if ((time < 30_000) && ((time / maxTime) < 0.95)) // avoid wasting time on opening
+            return 4;
+        else
+            return 5;
+    }
+
     public double Score(Board board, bool color)
     {
         if (board.IsInCheckmate())
@@ -26,7 +36,7 @@ public class MyBot : IChessBot
 
         double score = 0.0;
         PieceList[] pieces = board.GetAllPieceLists();
-   
+
         foreach (PieceList pieceList in pieces)
         {
             foreach (Piece piece in pieceList)
@@ -40,17 +50,17 @@ public class MyBot : IChessBot
 
         return score;
     }
-  
-    public double Maximize(Board board, bool color, int deep, double alpha, double beta)
+
+    public double Maximize(Board board, bool color, int depth, double alpha, double beta)
     {
-        if (deep == 1)
+        if (depth == 1)
             return Score(board, color);
 
         double maxScore = double.NegativeInfinity;
         foreach (Move move in board.GetLegalMoves())
         {
             board.MakeMove(move);
-            double score = Minimize(board, color, deep - 1, alpha, beta);
+            double score = Minimize(board, color, depth - 1, alpha, beta);
             board.UndoMove(move);
 
             maxScore = Math.Max(maxScore, score);
@@ -62,18 +72,17 @@ public class MyBot : IChessBot
 
         return maxScore;
     }
-   
 
-    public double Minimize(Board board, bool color, int deep, double alpha, double beta)
+    public double Minimize(Board board, bool color, int depth, double alpha, double beta)
     {
-        if (deep == 1)
+        if (depth == 1)
             return Score(board, color);
 
         double minScore = double.PositiveInfinity;
         foreach (Move move in board.GetLegalMoves())
         {
             board.MakeMove(move);
-            double score = Maximize(board, color, deep - 1, alpha, beta);
+            double score = Maximize(board, color, depth - 1, alpha, beta);
             board.UndoMove(move);
 
             minScore = Math.Min(minScore, score);
@@ -85,7 +94,6 @@ public class MyBot : IChessBot
 
         return minScore;
     }
-
 
     public Move Think(Board board, Timer timer)
     {
@@ -100,7 +108,8 @@ public class MyBot : IChessBot
         foreach (Move move in moves)
         {
             board.MakeMove(move);
-            double score = Minimize(board, board.IsWhiteToMove, 5, alpha, beta);
+            int depth = CalculateDepth(timer.MillisecondsRemaining, timer.GameStartTimeMilliseconds);
+            double score = Minimize(board, board.IsWhiteToMove, depth, alpha, beta);
             board.UndoMove(move);
 
             if (score > bestScore)
