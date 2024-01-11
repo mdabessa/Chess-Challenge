@@ -4,8 +4,139 @@ using System.Collections.Generic;
 
 namespace ChessChallenge.Example
 {
-    // A bot that uses the minimax algorithm to find the best move with depth 4.
+    // A bot that uses the minimax algorithm to find the best move with dinamic depth.
     public class EvilBot : IChessBot
+    {
+        public int CalculateDepth(double time, double maxTime)
+        {
+            if (time < 1000)
+                return 3;
+            else if ((time < 30_000) && ((time / maxTime) < 0.95)) // avoid wasting time on opening
+                return 4;
+            else
+                return 5;
+        }
+
+        public double Score(Board board, bool color)
+        {
+            if (board.IsInCheckmate())
+            {
+                if (board.IsWhiteToMove == color)
+                    return double.NegativeInfinity;
+                else
+                    return double.PositiveInfinity;
+            }
+
+            Dictionary<PieceType, int> values = new Dictionary<PieceType, int>
+        {
+            { PieceType.Pawn, 100 },
+            { PieceType.Knight, 300 },
+            { PieceType.Bishop, 300 },
+            { PieceType.Rook, 500 },
+            { PieceType.Queen, 900 },
+            { PieceType.King, 0 }
+        };
+
+            double score = 0.0;
+            PieceList[] pieces = board.GetAllPieceLists();
+
+            foreach (PieceList pieceList in pieces)
+            {
+                foreach (Piece piece in pieceList)
+                {
+                    if (piece.IsWhite != color)
+                        score += values[piece.PieceType];
+                    else
+                        score -= values[piece.PieceType];
+                }
+            }
+
+            return score;
+        }
+
+        public double Maximize(Board board, bool color, int depth, double alpha, double beta)
+        {
+            if (depth == 1)
+                return Score(board, color);
+
+            double maxScore = double.NegativeInfinity;
+            foreach (Move move in board.GetLegalMoves())
+            {
+                board.MakeMove(move);
+                double score = Minimize(board, color, depth - 1, alpha, beta);
+                board.UndoMove(move);
+
+                maxScore = Math.Max(maxScore, score);
+                alpha = Math.Max(alpha, score);
+
+                if (beta <= alpha)
+                    break;
+            }
+
+            return maxScore;
+        }
+
+        public double Minimize(Board board, bool color, int depth, double alpha, double beta)
+        {
+            if (depth == 1)
+                return Score(board, color);
+
+            double minScore = double.PositiveInfinity;
+            foreach (Move move in board.GetLegalMoves())
+            {
+                board.MakeMove(move);
+                double score = Maximize(board, color, depth - 1, alpha, beta);
+                board.UndoMove(move);
+
+                minScore = Math.Min(minScore, score);
+                beta = Math.Min(beta, score);
+
+                if (beta <= alpha)
+                    break;
+            }
+
+            return minScore;
+        }
+
+        public Move Think(Board board, Timer timer)
+        {
+            Move[] moves = board.GetLegalMoves();
+
+            // list with only the first move of moves
+            List<Move> bestMoves = new();
+            double bestScore = double.NegativeInfinity;
+            double alpha = double.NegativeInfinity;
+            double beta = double.PositiveInfinity;
+
+            foreach (Move move in moves)
+            {
+                board.MakeMove(move);
+                int depth = CalculateDepth(timer.MillisecondsRemaining, timer.GameStartTimeMilliseconds);
+                double score = Minimize(board, board.IsWhiteToMove, depth, alpha, beta);
+                board.UndoMove(move);
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestMoves.Clear();
+                    bestMoves.Add(move);
+                }
+                else if (score == bestScore)
+                {
+                    bestMoves.Add(move);
+                }
+            }
+
+
+            Random random = new();
+            Move bestMove = bestMoves[random.Next(bestMoves.Count)];
+            return bestMove;
+        }
+    }
+
+
+    // A bot that uses the minimax algorithm to find the best move with depth 4.
+    public class EvilBot2 : IChessBot
     {
         public double Score(Board board, bool color)
         {
